@@ -2,18 +2,31 @@
 
 set -euo pipefail
 
+# ============================================================
+# Reverse Scroll Wheel Installer
+# ============================================================
+
 APP_NAME="Reverse Scroll Wheel"
 BUNDLE_ID="de.raudzis.ReverseScrollWheel"
 VERSION="1.0.0"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 SOURCE="$SCRIPT_DIR/Sources/mouse-scroll-reverse.swift"
+ICON_SOURCE="$SCRIPT_DIR/Assets/AppIcon.png"
 
 INSTALL_DIR="$HOME/Applications"
 APP="$INSTALL_DIR/$APP_NAME.app"
+
 CONTENTS="$APP/Contents"
 MACOS="$CONTENTS/MacOS"
+RESOURCES="$CONTENTS/Resources"
+
 BINARY="$MACOS/ReverseScrollWheel"
+ICON="$RESOURCES/AppIcon.icns"
+
+ICONSET="$SCRIPT_DIR/.AppIcon.iconset"
+
 
 echo
 echo "Reverse Scroll Wheel"
@@ -22,9 +35,10 @@ echo
 echo "Version $VERSION"
 echo
 
-# ------------------------------------------------------------
+
+# ============================================================
 # Requirements
-# ------------------------------------------------------------
+# ============================================================
 
 if ! command -v swiftc >/dev/null 2>&1; then
     echo "Error: Swift compiler not found."
@@ -36,6 +50,7 @@ if ! command -v swiftc >/dev/null 2>&1; then
     exit 1
 fi
 
+
 if [[ ! -f "$SOURCE" ]]; then
     echo "Error: Source file not found:"
     echo
@@ -44,9 +59,19 @@ if [[ ! -f "$SOURCE" ]]; then
     exit 1
 fi
 
-# ------------------------------------------------------------
+
+if [[ ! -f "$ICON_SOURCE" ]]; then
+    echo "Error: App icon not found:"
+    echo
+    echo "    $ICON_SOURCE"
+    echo
+    exit 1
+fi
+
+
+# ============================================================
 # Clean up legacy installation
-# ------------------------------------------------------------
+# ============================================================
 
 echo "Checking for legacy installation..."
 
@@ -72,28 +97,41 @@ for PLIST in "${LEGACY_PLISTS[@]}"; do
 
 done
 
+
 rm -rf "$HOME/Library/Application Support/ReverseScrollWheel"
 rm -rf "$HOME/Library/Logs/ReverseScrollWheel"
 
-# ------------------------------------------------------------
-# Stop existing version
-# ------------------------------------------------------------
+
+# ============================================================
+# Stop existing application
+# ============================================================
 
 if pgrep -x ReverseScrollWheel >/dev/null 2>&1; then
+
     echo "Stopping running version..."
+
     pkill -x ReverseScrollWheel || true
+
     sleep 1
+
 fi
 
-# ------------------------------------------------------------
-# Build application
-# ------------------------------------------------------------
+
+# ============================================================
+# Create application bundle
+# ============================================================
 
 echo "Creating application bundle..."
 
 rm -rf "$APP"
 
 mkdir -p "$MACOS"
+mkdir -p "$RESOURCES"
+
+
+# ============================================================
+# Compile Swift
+# ============================================================
 
 echo "Compiling Swift source..."
 
@@ -105,18 +143,125 @@ swiftc \
 
 chmod 755 "$BINARY"
 
-# ------------------------------------------------------------
-# Info.plist
-# ------------------------------------------------------------
+
+# ============================================================
+# Create application icon
+# ============================================================
+
+echo "Creating application icon..."
+
+rm -rf "$ICONSET"
+
+mkdir -p "$ICONSET"
+
+
+# 16 × 16
+
+sips -z 16 16 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_16x16.png" \
+    >/dev/null
+
+
+# 16 × 16 @2x = 32 × 32
+
+sips -z 32 32 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_16x16@2x.png" \
+    >/dev/null
+
+
+# 32 × 32
+
+sips -z 32 32 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_32x32.png" \
+    >/dev/null
+
+
+# 32 × 32 @2x = 64 × 64
+
+sips -z 64 64 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_32x32@2x.png" \
+    >/dev/null
+
+
+# 128 × 128
+
+sips -z 128 128 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_128x128.png" \
+    >/dev/null
+
+
+# 128 × 128 @2x = 256 × 256
+
+sips -z 256 256 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_128x128@2x.png" \
+    >/dev/null
+
+
+# 256 × 256
+
+sips -z 256 256 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_256x256.png" \
+    >/dev/null
+
+
+# 256 × 256 @2x = 512 × 512
+
+sips -z 512 512 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_256x256@2x.png" \
+    >/dev/null
+
+
+# 512 × 512
+
+sips -z 512 512 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_512x512.png" \
+    >/dev/null
+
+
+# 512 × 512 @2x = 1024 × 1024
+
+sips -z 1024 1024 \
+    "$ICON_SOURCE" \
+    --out "$ICONSET/icon_512x512@2x.png" \
+    >/dev/null
+
+
+# Build .icns
+
+iconutil \
+    -c icns \
+    "$ICONSET" \
+    -o "$ICON"
+
+
+# Remove temporary iconset
+
+rm -rf "$ICONSET"
+
+
+# ============================================================
+# Create Info.plist
+# ============================================================
 
 echo "Creating Info.plist..."
 
 cat > "$CONTENTS/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
 "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 
 <plist version="1.0">
+
 <dict>
 
     <key>CFBundleName</key>
@@ -140,43 +285,69 @@ cat > "$CONTENTS/Info.plist" <<EOF
     <key>CFBundleVersion</key>
     <string>1</string>
 
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <!--
+        Run as an agent application.
+
+        This prevents the application from appearing
+        in the Dock or application switcher.
+    -->
+
     <key>LSUIElement</key>
     <true/>
 
 </dict>
+
 </plist>
 EOF
 
+
+# ============================================================
+# Validate application
+# ============================================================
+
+echo "Validating Info.plist..."
+
 plutil -lint "$CONTENTS/Info.plist"
 
-# ------------------------------------------------------------
-# Done
-# ------------------------------------------------------------
+
+# ============================================================
+# Finished
+# ============================================================
 
 echo
 echo "Installation complete."
 echo
-echo "Installed:"
+echo "Installed application:"
 echo
 echo "    $APP"
 echo
+echo
+echo "Application icon:"
+echo
+echo "    $ICON"
+echo
+echo
 echo "Next steps:"
 echo
-echo "1. Open the application:"
+echo "1. Start Reverse Scroll Wheel:"
 echo
 echo "    open \"$APP\""
 echo
-echo "2. Allow 'Reverse Scroll Wheel' in:"
+echo
+echo "2. Allow Reverse Scroll Wheel in:"
 echo
 echo "    System Settings"
 echo "    → Privacy & Security"
 echo "    → Accessibility"
 echo
-echo "3. Add 'Reverse Scroll Wheel' to:"
+echo
+echo "3. Add Reverse Scroll Wheel to:"
 echo
 echo "    System Settings"
 echo "    → General"
 echo "    → Login Items & Extensions"
-echo
 echo "    → Open at Login"
 echo
