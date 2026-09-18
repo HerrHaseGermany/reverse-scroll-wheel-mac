@@ -9,6 +9,7 @@ set -euo pipefail
 APP_NAME="Reverse Scroll Wheel"
 BUNDLE_ID="de.raudzis.ReverseScrollWheel"
 VERSION="1.0.0"
+BUILD="1"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -283,7 +284,7 @@ cat > "$CONTENTS/Info.plist" <<EOF
     <string>$VERSION</string>
 
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$BUILD</string>
 
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
